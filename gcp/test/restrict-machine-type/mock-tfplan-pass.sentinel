@@ -546,14 +546,13 @@ module_paths = [
 terraform_version = "0.11.13"
 
 variables = {
-	"gcp_credentials": "{\n  \"type\": \"service_account\",\n  \"project_id\": \"roger-berlind-gke-dev\",\n  \"private_key_id\": \"7fb455bd16c52866acf2d16dbce125ea00eb52a2\",\n  \"private_key\": \"-----BEGIN PRIVATE KEY-----\\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCsMJiNk7uD6bIK\\nlG6cvy+6UEJdOQJx+Zo+yAqbOOrGp4tnkJ0d1TqXEMhQMefonmbAMkk6mbk9D2CX\\nX0uWlimmfflS2/UdyV+XjrUB8spBwwH+XS2AMIhd2SQjR01BdBxrKmr1TOg6sDG2\\nS725wmyLVr0fqnvlugaGwS16ZJDRg6srzbjuLfIy/avHq+l0izMhM1JdQdldXfai\\nNcg2wbRCDxwUI4yI8AdL6R4mo8U9PDc9TLb+h9Xm45Yi/MpbDR5D3gnCz9SpB8Op\\nuMx1GyMVlZmTsuoW2T8vyhPoKe/M3uq/nV3e/U0AOEVnsIi/w7155cPJU0SO2Zoo\\nbQtBk3LJAgMBAAECggEAGAsFEifBtC6qhJ2rQEnV4T8ZtSijtcRzjDakfH4bEjgM\\n2B4yQhsm/jcCsWf2iN2tXULoRL14RxVhmGFfDZzUHgJTEQXTmSAoL+JmVepP4ZTY\\nL2tVUiP0tp3+VMq899m9qh0XKD9f4en+VwUGbey++UnYSJamjDJIfQJ2VjO6oPZ1\\ni3FVNuTJws/PxpCb8oQ6tRo98n1I+ZkwapOYEVpPCxyq7lFeUXJdISWbostLRCz1\\n9Bs3J92cKLhcF5d5nv7xatcEPYUrtmXjQNtKA+0/ABMmubj1paIAmpnGFewEGiqG\\n5/xjAKVKULaekuhjP0GmZNeDC2cRoT9yTw3L4eJWbQKBgQDvMKahIGFiMD/9e1oD\\nyXNnlKl5O2jhTXe7XbIeU8TAoBlj62YXDYoN7YAz5ckFsNNLInTn/kLT8JgwOw9V\\nTE68nchqCbqRmKesJLnxdTs0FnRijJOOmZpPg+RLptwTkApGy8f5cB2V8SEWZcLb\\nQxT0mCZlUynqZY7yVSbewh7J1wKBgQC4SoV9kif3gHHoa3kwFBtB/Hfb2nLY0TPc\\nqZaHXe2VEKpTSAkrb+jTTvJrLeOrrEuLeh8U774qxLxzXQPxekOdflkDfr5WPSy2\\nHg9dRgA/MTNurH31cpG1NvN/sjyZWBa3L1s5tth4eoRHRnDDvLh5TpLAfRifR2QD\\nbgBZi/RUXwKBgAqe4Gc7JtfTSKQavA56/XLV+Qh3CNsoM27QZD5QfeYHtdjn9OqF\\nIWIo745eX6SvC1LEvugmNBVxE3Dgznd9IeniH6oFsJESdC+CmfcMu4o+jQBrOYoV\\na/Kn6pUpXZBIzwwBtGlw/v9Pa6aw8gwGWIHb16icHrpXtBcyjL1LZU6VAoGAafFV\\nOjHKTgsF8JHQEiaM4OstUDMNcL0bLlBDm8AQc3AoKkYwF0t3Mfqhe6HezvL2XtEu\\niw+jZ9y/ZSZkvO4HbsOSkmLLMrJqQKuZM4qpW6qCIa6BnpdlUiKr6o3hLloofNh5\\nff0yBliQMJU7ABs+hWX5ETUY8X/N6/bRtqixJcsCgYA7SNbtQf6PGTEx3o0K9OFN\\n+RAQttdT9IN3L9JivQ5Ay4yYDKXWZN1CRlF/XKNOU74CRefYoTaW9p/fAnLtqyZQ\\nVo663v3kxtPRvS7lKdHccjJC44rkqSm44x0bo1Mu8UO+qWttHIQYyWQqQknVuap3\\n+1qncsMKH09HBkCA3mpFOQ==\\n-----END PRIVATE KEY-----\\n\",\n  \"client_email\": \"297512831463-compute@developer.gserviceaccount.com\",\n  \"client_id\": \"107106536005258495378\",\n  \"auth_uri\": \"https://accounts.google.com/o/oauth2/auth\",\n  \"token_uri\": \"https://accounts.google.com/o/oauth2/token\",\n  \"auth_provider_x509_cert_url\": \"https://www.googleapis.com/oauth2/v1/certs\",\n  \"client_x509_cert_url\": \"https://www.googleapis.com/robot/v1/metadata/x509/297512831463-compute%40developer.gserviceaccount.com\"\n}",
-	"gcp_project":     "roger-berlind-gke-dev",
-	"gcp_region":      "us-east1",
-	"gcp_zone":        "us-east1-b",
-	"image":           "debian-cloud/debian-9",
-	"instance_name":   "demo",
-	"machine_type_1":  "n1-standard-2",
-	"machine_type_2":  "n1-standard-2",
+	"gcp_project":    "roger-berlind-gke-dev",
+	"gcp_region":     "us-east1",
+	"gcp_zone":       "us-east1-b",
+	"image":          "debian-cloud/debian-9",
+	"instance_name":  "demo",
+	"machine_type_1": "n1-standard-2",
+	"machine_type_2": "n1-standard-2",
 }
 
 module = func(path) {
