@@ -1,0 +1,79 @@
+# imports
+import "tfplan"
+
+# Find all resources of a specific type
+# from all modules using the tfplan import
+find_resources_from_plan = func(type) {
+
+  # Start with an empty list
+  resources = []
+
+  # Iterate over all modules in the tfplan import
+  for tfplan.module_paths as path {
+    # Append all resources of the specified type
+    # or the empty map, {}, if the module does not have any
+    append(resources, (tfplan.module(path).resources[type] else {}))
+  }
+
+  return resources
+}
+
+# Validate that all VMware VMs have at most 4 CPUs
+validate_cpu_and_memory_limits = func() {
+
+  # Initialize validated to true
+  # This will be set to false if any instances violate rule
+  validated = true
+
+  # Get all VMware VMs
+  all_resources = find_resources_from_plan("vsphere_virtual_machine")
+
+  # Loop through the module-level resource maps
+  for all_resources as resource_map {
+    # Loop through the named resources
+    for resource_map as name, instances {
+      # Loop through resource instances
+      for instances as index, r {
+
+        # Skip resources that are being destroyed
+        # to avoid unnecessary policy violations
+        if length(r.diff) == 0 {
+          print("Skipping resource", name + "-" + string(index), "that is being destroyed.")
+          continue
+        }
+
+        # Validate that each instance has valid number of CPUs
+        # If not, print violation message
+        if int(r.applied.num_cpus) > 4 {
+          print("virtual machine", name + "-" + string(index),
+            "has", r.applied.num_cpus, "CPUs,",
+            "which is greater than the limit", 4)
+          validated = false
+        }
+
+        # Validate that each instance has valid amount of memory
+        # If not, print violation message
+        if int(r.applied.memory) > 8192 {
+          print("virtual machine", name + "-" + string(index),
+            "has", r.applied.memory,
+            "MB of memory, which is greater than the limit", 8192)
+          validated = false
+        }
+
+      } // end resource instances
+    } // end named resources
+  } // end resorce maps
+
+  # Return validated which will be false if there were any violators
+  return validated
+}
+
+# Rule to restrict CPUs and memory
+limit_cpu_and_memory = rule {
+  validate_cpu_and_memory_limits()
+}
+
+# Main rule that requires other rules to be true
+main = rule {
+  limit_cpu_and_memory
+}
