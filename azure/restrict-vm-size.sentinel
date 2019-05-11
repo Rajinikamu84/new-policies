@@ -1,0 +1,89 @@
+# imports
+import "tfplan"
+
+# Find all resources of a specific type
+# from all modules using the tfplan import
+find_resources_from_plan = func(type) {
+
+  # Start with an empty list
+  resources = []
+
+  # Iterate over all modules in the tfplan import
+  for tfplan.module_paths as path {
+    # Append all resources of the specified type
+    # or the empty map, {}, if the module does not have any
+    append(resources, (tfplan.module(path).resources[type] else {}))
+  }
+
+  return resources
+}
+
+# Allowed Azure VM Sizes
+# We don't include Standard_D1_v2 or Standard_D1_V2 to illustrate overriding failed policy
+# comparison is case-sensitive
+# so including both cases for "v"
+# since we have seen both used
+allowed_vm_sizes = [
+  "Standard_D2_v2",
+  "Standard_D2_V2",
+  "Standard_DS1_v2",
+  "Standard_DS1_V2",
+  "Standard_DS2_v2",
+  "Standard_DS2_V2",
+  "Standard_A1",
+  "Standard_A2",
+  "Standard_D1",
+  "Standard_D2",
+]
+
+# Validate that all Azure VMs have vm_size
+# in allowed_vm_sizes list
+validate_vm_sizes = func() {
+
+  # Initialize validated to true
+  # This will be set to false if any instances violate rule
+  validated = true
+
+  # Get all Azure VMs
+  all_resources = find_resources_from_plan("azurerm_virtual_machine")
+
+  # Loop through the module-level resource maps
+  for all_resources as resource_map {
+    # Loop through the named resources
+    for resource_map as name, instances {
+      # Loop through resource instances
+      for instances as index, r {
+
+        # Skip resources that are being destroyed
+        # to avoid unnecessary policy violations
+        if length(r.diff) == 0 {
+          print("Skipping resource", name + "-" + string(index), "that is being destroyed.")
+          continue
+        }
+
+        # Validate that each VM has allowed size
+        # If not, print violation message
+        if r.applied.vm_size not in allowed_vm_sizes {
+          print("Azure VM", name + "-" + string(index),
+            "has attribute", r.applied.vm_size,
+            "that is not in the list", allowed_vm_sizes)
+          validated = false
+        }
+
+      } // end resource instances
+    } // end named resources
+  } // end resorce maps
+
+  # Return validated which will be false if there were any violators
+  return validated
+}
+
+# Rule to restrict Azure VM sizes
+vm_size_allowed = rule {
+  validate_vm_sizes()
+}
+
+# Main rule that requires other rules to be true
+main = rule {
+  vm_size_allowed
+}

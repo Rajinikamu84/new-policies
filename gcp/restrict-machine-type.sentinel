@@ -1,0 +1,78 @@
+# imports
+import "tfplan"
+
+# Find all resources of a specific type
+# from all modules using the tfplan import
+find_resources_from_plan = func(type) {
+
+  # Start with an empty list
+  resources = []
+
+  # Iterate over all modules in the tfplan import
+  for tfplan.module_paths as path {
+    # Append all resources of the specified type
+    # or the empty map, {}, if the module does not have any
+    append(resources, (tfplan.module(path).resources[type] else {}))
+  }
+
+  return resources
+}
+
+# Allowed GCP Machine Types
+# We don't include n1-standard-1 to illustrate overriding failed policy
+allowed_types = [
+  "n1-standard-2",
+  "n1-standard-4",
+]
+
+# Validate that all GCP compute instances have machine_type
+# in allowed_types list
+validate_machine_types = func() {
+
+  # Initialize validated to true
+  # This will be set to false if any instances violate rule
+  validated = true
+
+  # Get all google compute instances
+  all_resources = find_resources_from_plan("google_compute_instance")
+
+  # Loop through the module-level resource maps
+  for all_resources as resource_map {
+    # Loop through the named resources
+    for resource_map as name, instances {
+      # Loop through resource instances
+      for instances as index, r {
+
+        # Skip resources that are being destroyed
+        # to avoid unnecessary policy violations
+        if length(r.diff) == 0 {
+          print("Skipping resource", name + "-" + string(index), "that is being destroyed.")
+          continue
+        }
+
+        # Validate that each instance has allowed value
+        # If not, print violation message
+        if r.applied.machine_type not in allowed_types {
+          print("GCP compute instance", name + "-" + string(index),
+            "has attribute", r.applied.machine_type,
+            "that is not in the list", allowed_types)
+          validated = false
+        }
+
+      } // end resource instances
+    } // end named resources
+  } // end resorce maps
+
+  # Return validated which will be false if there were any violators
+  return validated
+}
+
+# Rule to restrict GCP compute machine types
+machine_type_allowed = rule {
+  validate_machine_types()
+}
+
+# Main rule that requires other rules to be true
+main = rule {
+  machine_type_allowed
+}

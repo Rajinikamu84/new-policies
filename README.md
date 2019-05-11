@@ -1,0 +1,7 @@
+# Governance with Terraform Sentinel Policies
+
+Sentinel gives operations teams the governance capabilities they need to ensure that all infrastructure provisioned with Terraform Enterprise complies with their organization's provisioning rules. The files under this directory provide some sample Sentinel policies for several clouds including AWS, Microsoft Azure, Google Cloud Platform (GCP), and VMware. The external directory also includes an example of an external data source and a Sentinel policy which checks the result of that data source.
+
+In addition, Sentinel [mock files](https://www.terraform.io/docs/enterprise/sentinel/mock.html) have been provided under the test directory of each cloud. These were generated from actual Terraform plans run against Terraform code that provisioned resources in these clouds. The mock-tfplan-pass.sentinel and mock-tfplan-fail.sentinel files were edited to respectively pass and fail the associated Sentinel policies.
+
+> **See also:** This repo shows how to use Sentinel policies to govern a wide range of specific kinds of infrastructure, but doesn't go into detail about how to use these policies with Terraform Enterprise. If you'd rather see an end-to-end workflow for managing a set of Sentinel policies with TFE (including Sentinel tests and Terraform code for managing policy sets), see [the hashicorp/tfe-policies-example repo](https://github.com/hashicorp/tfe-policies-example).
