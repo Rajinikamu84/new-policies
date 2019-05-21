@@ -1,0 +1,80 @@
+# imports
+import "tfplan"
+import "types"
+
+# Find all resources of a specific type
+# from all modules using the tfplan import
+find_resources_from_plan = func(type) {
+
+  # Start with an empty list
+  resources = []
+
+  # Iterate over all modules in the tfplan import
+  for tfplan.module_paths as path {
+    # Append all resources of the specified type
+    # or the empty map, {}, if the module does not have any
+    append(resources, (tfplan.module(path).resources[type] else {}))
+  }
+
+  return resources
+}
+
+# Validate that all AWS ingress security group rules
+# do not have cidr_block 0.0.0.0/0
+validate_sgr_cidr_blocks = func() {
+
+  # Initialize validated to true
+  # This will be set to false if any SG rules violate rule
+  validated = true
+
+  # Get all Security Group rules
+  resource_maps = find_resources_from_plan("aws_security_group_rule")
+
+  # Loop through the module-level resource maps
+  for resource_maps as resource_map {
+    # Loop through the named resources
+    for resource_map as name, instances {
+      # Loop through resource instances
+      for instances as index, r {
+
+        # Skip resources that are being destroyed
+        # to avoid unnecessary policy violations
+        if length(r.diff) == 0 {
+          print("Skipping security group rule",
+            name + "-" + string(index),
+            "that is being destroyed.")
+          continue
+        }
+
+        # Validate that each SG rule does not have disallowed value
+        # If it does, print violation message
+        # Since cidr_blocks is optional and could be computed,
+        # We check that it is present and really a list
+        # before checking whether it contains "0.0.0.0/0"
+        if r.applied.type is "ingress" and
+           length(r.applied.cidr_blocks) else 0 > 0 and
+           types.type_of(r.applied.cidr_blocks) is "list" and
+           r.applied.cidr_blocks contains "0.0.0.0/0" {
+             print("Ingress security group rule",
+               name + "-" + string(index),
+               "contains disallowed cidr_block 0.0.0.0/0" )
+             validated = false
+        }
+
+      } // end resource instances
+    } // end named resources
+  } // end resorce maps
+
+  # Return validated which will be false if there were any violators
+  return validated
+}
+
+# Rule to restrict ingress security group rules
+restrict_ingress_sgrs = rule {
+  validate_sgr_cidr_blocks()
+}
+
+# Main rule that requires other rules to be true
+main = rule {
+  restrict_ingress_sgrs
+}

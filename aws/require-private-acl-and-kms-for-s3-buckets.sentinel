@@ -1,0 +1,88 @@
+import "tfplan"
+
+# Find all resources of a specific type
+# from all modules using the tfplan import
+find_resources_from_plan = func(type) {
+
+  # Start with an empty list
+  resources = []
+
+  # Iterate over all modules in the tfplan import
+  for tfplan.module_paths as path {
+    # Append all resources of the specified type
+    # or the empty map, {}, if the module does not have any
+    append(resources, (tfplan.module(path).resources[type] else {}))
+  }
+
+  return resources
+}
+
+# Function to validate that ACL is private and KMS encryption used
+validate_private_acl_and_kms_encryption = func() {
+
+  # Get all S3 buckets
+  resource_maps = find_resources_from_plan("aws_s3_bucket")
+
+  # Initialize booleans to true
+  # They will be set to false if any instances violate rules
+  private = true
+  encrypted_by_kms = true
+
+  # Loop through the module-level resource maps
+  for resource_maps as resource_map {
+    # Loop through the named resources
+    for resource_map as name, instances {
+      # Loop through resource instances
+      for instances as index, r {
+
+        # Skip resources that are being destroyed
+        # to avoid unnecessary policy violations
+        if length(r.diff) == 0 {
+          print("Skipping bucket", name + "-" + string(index),
+            "that is being destroyed.")
+          continue
+        }
+
+        # Check whether ACL is private
+        if r.applied.acl is not "private" {
+          print("S3 bucket", name + "-" + string(index),
+          "has ACL", r.applied.acl,
+          "that is not private.")
+          private = false
+        }
+
+        # Check whether server-side encryption enabled
+        # by default with KMS encryption
+        if length(r.applied.server_side_encryption_configuration) else 0 == 0 or r.applied.server_side_encryption_configuration[0].rule[0].apply_server_side_encryption_by_default[0].sse_algorithm is not "aws:kms" {
+          print("S3 bucket", name + "-" + string(index),
+          "is not encrypted by default with a KMS key.")
+          encrypted_by_kms = false
+        }
+
+      } // end resource instances
+    } // end named resources
+  } // end resorce maps
+
+  # Return booleans
+  return [private, encrypted_by_kms]
+}
+
+# Call the validation function and assign results
+validations = validate_private_acl_and_kms_encryption()
+private = validations[0]
+encrypted_by_kms = validations[1]
+
+# Rule to require all buckets have ACL private
+require_private_acl = rule {
+  private is true
+}
+
+# Rule to require server-side encryption by a KMS key
+require_kms_encryption = rule {
+  encrypted_by_kms is true
+}
+
+# Main rule that requires other rules to be true
+main = rule {
+  require_private_acl and require_kms_encryption
+}

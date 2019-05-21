@@ -35,10 +35,10 @@ validate_instance_types = func() {
   validated = true
 
   # Get all AWS instances
-  all_resources = find_resources_from_plan("aws_instance")
+  resource_maps = find_resources_from_plan("aws_instance")
 
   # Loop through the module-level resource maps
-  for all_resources as resource_map {
+  for resource_maps as resource_map {
     # Loop through the named resources
     for resource_map as name, instances {
       # Loop through resource instances
@@ -47,7 +47,8 @@ validate_instance_types = func() {
         # Skip resources that are being destroyed
         # to avoid unnecessary policy violations
         if length(r.diff) == 0 {
-          print("Skipping resource", name + "-" + string(index), "that is being destroyed.")
+          print("Skipping EC2 instance", name + "-" + string(index),
+            "that is being destroyed.")
           continue
         }
 
