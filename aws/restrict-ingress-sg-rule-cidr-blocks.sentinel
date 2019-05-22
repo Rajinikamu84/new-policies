@@ -69,8 +69,8 @@ validate_sgr_cidr_blocks = func() {
   return validated
 }
 
-sgrs_validated = validate_sgr_cidr_blocks()
 # Rule to restrict ingress security group rules
+sgrs_validated = validate_sgr_cidr_blocks()
 restrict_ingress_sgrs = rule {
   sgrs_validated
 }

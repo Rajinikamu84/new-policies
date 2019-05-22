@@ -64,13 +64,14 @@ validate_cpu_and_memory_limits = func() {
     } // end named resources
   } // end resorce maps
 
-  # Return validated which will be false if there were any violators
+  # Return validated which will be false if any violators
   return validated
 }
 
 # Rule to restrict CPUs and memory
+cpu_and_memory_validated = validate_cpu_and_memory_limits()
 limit_cpu_and_memory = rule {
-  validate_cpu_and_memory_limits()
+  cpu_and_memory_validated
 }
 
 # Main rule that requires other rules to be true
