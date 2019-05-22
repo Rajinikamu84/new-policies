@@ -12,7 +12,7 @@ find_resources_from_plan = func(type) {
   for tfplan.module_paths as path {
     # Append all resources of the specified type
     # or the empty map, {}, if the module does not have any
-    append(resources, (tfplan.module(path).resources[type] else {}))
+    append(resources, tfplan.module(path).resources[type] else {})
   }
 
   return resources
@@ -34,10 +34,10 @@ validate_machine_types = func() {
   validated = true
 
   # Get all google compute instances
-  all_resources = find_resources_from_plan("google_compute_instance")
+  resource_maps = find_resources_from_plan("google_compute_instance")
 
   # Loop through the module-level resource maps
-  for all_resources as resource_map {
+  for resource_maps as resource_map {
     # Loop through the named resources
     for resource_map as name, instances {
       # Loop through resource instances

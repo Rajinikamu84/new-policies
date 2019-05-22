@@ -12,7 +12,7 @@ find_resources_from_plan = func(type) {
   for tfplan.module_paths as path {
     # Append all resources of the specified type
     # or the empty map, {}, if the module does not have any
-    append(resources, (tfplan.module(path).resources[type] else {}))
+    append(resources, tfplan.module(path).resources[type] else {})
   }
 
   return resources
