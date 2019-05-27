@@ -19,9 +19,9 @@ find_resources_from_plan = func(type) {
   # Iterate over all modules in the tfplan import
   for tfplan.module_paths as path {
 
-    # Append all resources of the specified type
-    # or the empty map, {}, if the module does not have any
-    # to resource_maps, setting the key to the module path
+    # Append all resources of the specified type to resource_maps
+    # setting the key to the module path. Set the empty map, {}, If the
+    # module does not have any resources of the specified type.
     resource_maps[path] = tfplan.module(path).resources[type] else {}
   }
 
