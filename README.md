@@ -2,6 +2,8 @@
 
 Sentinel gives operations teams the governance capabilities they need to ensure that all infrastructure provisioned with Terraform Enterprise complies with their organization's provisioning rules. The files under this directory provide some sample Sentinel policies for several clouds including AWS, Microsoft Azure, Google Cloud Platform (GCP), and VMware.
 
+These policies have been tested with Terraform 0.11.14, but have not yet been tested with Terraform 0.12.
+
 In addition, Sentinel [mock files](https://www.terraform.io/docs/enterprise/sentinel/mock.html) and [test files](https://docs.hashicorp.com/sentinel/commands/config#test-cases) have been provided under the test directory of each cloud so that the policies can be tested with the [Sentinel Simulator](https://docs.hashicorp.com/sentinel/commands). The mocks were generated from actual Terraform plans run against Terraform code that provisioned resources in these clouds. The mock-tfplan-pass.sentinel and mock-tfplan-fail.sentinel files were edited to respectively pass and fail the associated Sentinel policies. For policies that have multiple rules, there are more than one failing mock file with names that indicate which condition or conditions they fail.
 
 To test the policies of any of the clouds, please do the following:
