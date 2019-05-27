@@ -1,59 +1,89 @@
-# imports
+##### restrict-gce-machine-type.sentinel #####
+# This policy uses the Sentinel tfplan import to require that
+# all Google compute instances have machine types from an allowed list
+
+##### Imports #####
+
 import "tfplan"
+import "strings"
+
+##### Functions #####
 
 # Find all resources of a specific type
 # from all modules using the tfplan import
 find_resources_from_plan = func(type) {
 
-  # Start with an empty list
-  resources = []
+  # Start with an empty map
+  resource_maps = {}
 
   # Iterate over all modules in the tfplan import
   for tfplan.module_paths as path {
+
     # Append all resources of the specified type
     # or the empty map, {}, if the module does not have any
-    append(resources, tfplan.module(path).resources[type] else {})
+    # to resource_maps, setting the key to the module path
+    resource_maps[path] = tfplan.module(path).resources[type] else {}
   }
 
-  return resources
+  # return resource_maps
+  return resource_maps
 }
 
-# Allowed GCP Machine Types
-# We don't include n1-standard-1 to illustrate overriding failed policy
-allowed_types = [
-  "n1-standard-2",
-  "n1-standard-4",
-]
+# Get the full address of a resource including modules, type, and name
+# in form module.<A>.module.<B>.<type>.<name>
+# module_path is like module paths returned by tfplan.module_paths
+get_address = func(module_path, type, name) {
+
+  # Handle root and non-root modules differently
+  if length(module_path) == 0 {
+    # root module
+    address = type + "." + name
+  } else {
+    # non-root module
+    address = "module." + strings.join(module_path, ".module.") + "." + type + "." + name
+  }
+
+  return address
+
+}
 
 # Validate that all GCP compute instances have machine_type
 # in allowed_types list
-validate_machine_types = func() {
+validate_machine_types = func(allowed_types) {
 
   # Initialize validated to true
   # This will be set to false if any instances violate rule
   validated = true
 
-  # Get all google compute instances
-  resource_maps = find_resources_from_plan("google_compute_instance")
+  # Set resource_type
+  resource_type = "google_compute_instance"
+
+  # Get all resources of specified type
+  resource_maps = find_resources_from_plan(resource_type)
 
   # Loop through the module-level resource maps
-  for resource_maps as resource_map {
+  for resource_maps as module_path, resource_map {
     # Loop through the named resources
     for resource_map as name, instances {
       # Loop through resource instances
       for instances as index, r {
 
+        # Get addresses of the resource and the instance
+        resource_address = get_address(module_path, resource_type, name)
+        instance_address = resource_address + "[" + string(index) + "]"
+
         # Skip resources that are being destroyed
         # to avoid unnecessary policy violations
         if length(r.diff) == 0 {
-          print("Skipping resource", name + "-" + string(index), "that is being destroyed.")
+          print("Skipping GCP compute instance", instance_address,
+            "that is being destroyed.")
           continue
         }
 
         # Validate that each instance has allowed value
         # If not, print violation message
         if r.applied.machine_type not in allowed_types {
-          print("GCP compute instance", name + "-" + string(index),
+          print("GCP compute instance", instance_address,
             "has attribute", r.applied.machine_type,
             "that is not in the list", allowed_types)
           validated = false
@@ -67,9 +97,20 @@ validate_machine_types = func() {
   return validated
 }
 
+##### Lists #####
+
+# Allowed GCP Machine Types
+# We don't include n1-standard-1 to illustrate overriding failed policy
+allowed_machine_types = [
+  "n1-standard-2",
+  "n1-standard-4",
+]
+
+##### Rules #####
+
 # Rule to restrict GCP compute machine types
 machine_type_allowed = rule {
-  validate_machine_types()
+  validate_machine_types(allowed_machine_types)
 }
 
 # Main rule that requires other rules to be true

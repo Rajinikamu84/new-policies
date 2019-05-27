@@ -1,12 +1,11 @@
-##### restrict-ingress-sg-rule-cidr-blocks.sentinel #####
-# This policy uses the Sentinel tfplan import to validate that
-# no security group rules have the CIDR "0.0.0.0/0"
+##### restrict-db-instance-engines.sentinel #####
+# This policy uses the Sentinel tfplan import to require that
+# all RDS database instances have engines from an allowed list
 
 ##### Imports #####
 
 import "tfplan"
 import "strings"
-import "types"
 
 ##### Functions #####
 
@@ -48,16 +47,16 @@ get_address = func(module_path, type, name) {
 
 }
 
-# Validate that all AWS ingress security group rules
-# do not have cidr_block 0.0.0.0/0
-validate_sgr_cidr_blocks = func() {
+# Validate that all RDS DB instances have engine
+# in allowed_engines list
+validate_engines = func(allowed_engines) {
 
   # Initialize validated to true
-  # This will be set to false if any SG rules violate rule
+  # This will be set to false if any DB instances violate rule
   validated = true
 
   # Set resource_type
-  resource_type = "aws_security_group_rule"
+  resource_type = "aws_db_instance"
 
   # Get all resources of specified type
   resource_maps = find_resources_from_plan(resource_type)
@@ -76,24 +75,18 @@ validate_sgr_cidr_blocks = func() {
         # Skip resources that are being destroyed
         # to avoid unnecessary policy violations
         if length(r.diff) == 0 {
-          print("Skipping security group rule", instance_address,
+          print("Skipping DB instance", instance_address,
             "that is being destroyed.")
           continue
         }
 
-        # Validate that each SG rule does not have disallowed value
-        # If it does, print violation message
-        # Since cidr_blocks is optional and could be computed,
-        # We check that it is present and really a list
-        # before checking whether it contains "0.0.0.0/0"
-        if r.applied.type is "ingress" and
-           length(r.applied.cidr_blocks) else 0 > 0 and
-           types.type_of(r.applied.cidr_blocks) is "list" and
-           r.applied.cidr_blocks contains "0.0.0.0/0" {
-             print("Ingress security group rule",
-               instance_address,
-               "contains disallowed cidr_block 0.0.0.0/0" )
-             validated = false
+        # Validate that each instance has allowed value
+        # If not, print violation message
+        if r.applied.engine not in allowed_engines {
+          print("RDS DB instance", instance_address,
+            "has engine", r.applied.engine,
+            "that is not in the allowed list:", allowed_engines)
+          validated = false
         }
 
       } // end resource instances
@@ -104,15 +97,23 @@ validate_sgr_cidr_blocks = func() {
   return validated
 }
 
+##### Lists #####
+# Allowed RDS DB Engines
+allowed_engines = [
+  "mysql",
+  "oracle-se1",
+  "oracle-se2",
+  "postgres",
+]
+
 ##### Rules #####
 
-# Rule to restrict ingress security group rules
-sgrs_validated = validate_sgr_cidr_blocks()
-restrict_ingress_sgrs = rule {
-  sgrs_validated is true
+# Rule to restrict RDS DB engines
+engine_allowed = rule {
+  validate_engines(allowed_engines)
 }
 
 # Main rule that requires other rules to be true
 main = rule {
-  restrict_ingress_sgrs
+  engine_allowed
 }

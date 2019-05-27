@@ -1,44 +1,81 @@
-# imports
+##### restrict-vm-disk-size.sentinel #####
+# This policy uses the Sentinel tfplan import to require that
+# all VMware VMs obey a disk limit
+
+##### Imports #####
+
 import "tfplan"
+import "strings"
+
+##### Functions #####
 
 # Find all resources of a specific type
 # from all modules using the tfplan import
 find_resources_from_plan = func(type) {
 
-  # Start with an empty list
-  resources = []
+  # Start with an empty map
+  resource_maps = {}
 
   # Iterate over all modules in the tfplan import
   for tfplan.module_paths as path {
+
     # Append all resources of the specified type
     # or the empty map, {}, if the module does not have any
-    append(resources, tfplan.module(path).resources[type] else {})
+    # to resource_maps, setting the key to the module path
+    resource_maps[path] = tfplan.module(path).resources[type] else {}
   }
 
-  return resources
+  # return resource_maps
+  return resource_maps
+}
+
+# Get the full address of a resource including modules, type, and name
+# in form module.<A>.module.<B>.<type>.<name>
+# module_path is like module paths returned by tfplan.module_paths
+get_address = func(module_path, type, name) {
+
+  # Handle root and non-root modules differently
+  if length(module_path) == 0 {
+    # root module
+    address = type + "." + name
+  } else {
+    # non-root module
+    address = "module." + strings.join(module_path, ".module.") + "." + type + "." + name
+  }
+
+  return address
+
 }
 
 # Validate that all VMware VMs have at most 4 CPUs
-validate_disk_size = func() {
+validate_disk_size = func(disk_limit) {
 
   # Initialize validated to true
   # This will be set to false if any instances violate rule
   validated = true
 
-  # Get all VMware VMs
-  all_resources = find_resources_from_plan("vsphere_virtual_machine")
+  # Set resource_type
+  resource_type = "vsphere_virtual_machine"
+
+  # Get all resources of specified type
+  resource_maps = find_resources_from_plan(resource_type)
 
   # Loop through the module-level resource maps
-  for all_resources as resource_map {
+  for resource_maps as module_path, resource_map {
     # Loop through the named resources
     for resource_map as name, instances {
       # Loop through resource instances
       for instances as index, r {
 
+        # Get addresses of the resource and the instance
+        resource_address = get_address(module_path, resource_type, name)
+        instance_address = resource_address + "[" + string(index) + "]"
+
         # Skip resources that are being destroyed
         # to avoid unnecessary policy violations
         if length(r.diff) == 0 {
-          print("Skipping resource", name + "-" + string(index), "that is being destroyed.")
+          print("Skipping resource", instance_address,
+            "that is being destroyed.")
           continue
         }
 
@@ -46,10 +83,10 @@ validate_disk_size = func() {
         for r.applied.disk as disk {
           # Validate that each disk has valid disk size
           # If not, print violation message
-          if int(disk.size) > 100 {
-            print("virtual machine", name + "-" + string(index),
+          if int(disk.size) > disk_limit {
+            print("virtual machine", instance_address,
             "has disk", disk.label, "with size",
-            disk.size, "that is greater than the limit", 100)
+            disk.size, "that is greater than the limit", disk_limit)
             validated = false
           }
 
@@ -62,8 +99,10 @@ validate_disk_size = func() {
   return validated
 }
 
-# Rule to restrict CPUs and memory
-vm_disks_validated = validate_disk_size()
+##### Rules #####
+
+# Rule to restrict disk size
+vm_disks_validated = validate_disk_size(100)
 limit_vm_disk_size = rule {
   vm_disks_validated
 }

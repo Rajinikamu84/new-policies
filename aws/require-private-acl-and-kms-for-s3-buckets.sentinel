@@ -1,51 +1,88 @@
+##### restrict-private-acl-and-kms-for-s3-buckets.sentinel #####
+# This policy uses the Sentinel tfplan import to require that
+# all S3 buckets have ACL "private" and be encrypted by a KMS key
+
+##### Imports #####
+
 import "tfplan"
+import "strings"
+
+##### Functions #####
 
 # Find all resources of a specific type
 # from all modules using the tfplan import
 find_resources_from_plan = func(type) {
 
-  # Start with an empty list
-  resources = []
+  # Start with an empty map
+  resource_maps = {}
 
   # Iterate over all modules in the tfplan import
   for tfplan.module_paths as path {
+
     # Append all resources of the specified type
     # or the empty map, {}, if the module does not have any
-    append(resources, tfplan.module(path).resources[type] else {})
+    # to resource_maps, setting the key to the module path
+    resource_maps[path] = tfplan.module(path).resources[type] else {}
   }
 
-  return resources
+  # return resource_maps
+  return resource_maps
+}
+
+# Get the full address of a resource including modules, type, and name
+# in form module.<A>.module.<B>.<type>.<name>
+# module_path is like module paths returned by tfplan.module_paths
+get_address = func(module_path, type, name) {
+
+  # Handle root and non-root modules differently
+  if length(module_path) == 0 {
+    # root module
+    address = type + "." + name
+  } else {
+    # non-root module
+    address = "module." + strings.join(module_path, ".module.") + "." + type + "." + name
+  }
+
+  return address
+
 }
 
 # Function to validate that ACL is private and KMS encryption used
 validate_private_acl_and_kms_encryption = func() {
-
-  # Get all S3 buckets
-  resource_maps = find_resources_from_plan("aws_s3_bucket")
 
   # Initialize booleans to true
   # They will be set to false if any instances violate rules
   private = true
   encrypted_by_kms = true
 
+  # Set resource_type
+  resource_type = "aws_s3_bucket"
+
+  # Get all resources of specified type
+  resource_maps = find_resources_from_plan(resource_type)
+
   # Loop through the module-level resource maps
-  for resource_maps as resource_map {
+  for resource_maps as module_path, resource_map {
     # Loop through the named resources
     for resource_map as name, instances {
       # Loop through resource instances
       for instances as index, r {
 
+        # Get addresses of the resource and the instance
+        resource_address = get_address(module_path, resource_type, name)
+        instance_address = resource_address + "[" + string(index) + "]"
+
         # Skip resources that are being destroyed
         # to avoid unnecessary policy violations
         if length(r.diff) == 0 {
-          print("Skipping bucket", name + "-" + string(index),
+          print("Skipping bucket", instance_address,
             "that is being destroyed.")
           continue
         }
 
         # Check whether ACL is private
         if r.applied.acl is not "private" {
-          print("S3 bucket", name + "-" + string(index),
+          print("S3 bucket", instance_address,
           "has ACL", r.applied.acl,
           "that is not private.")
           private = false
@@ -54,7 +91,7 @@ validate_private_acl_and_kms_encryption = func() {
         # Check whether server-side encryption enabled
         # by default with KMS encryption
         if length(r.applied.server_side_encryption_configuration) else 0 == 0 or r.applied.server_side_encryption_configuration[0].rule[0].apply_server_side_encryption_by_default[0].sse_algorithm is not "aws:kms" {
-          print("S3 bucket", name + "-" + string(index),
+          print("S3 bucket", instance_address,
           "is not encrypted by default with a KMS key.")
           encrypted_by_kms = false
         }
@@ -66,6 +103,8 @@ validate_private_acl_and_kms_encryption = func() {
   # Return booleans
   return [private, encrypted_by_kms]
 }
+
+##### Rules #####
 
 # Call the validation function and assign results
 validations = validate_private_acl_and_kms_encryption()

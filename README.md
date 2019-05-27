@@ -1,6 +1,6 @@
 # Governance with Terraform Sentinel Policies
 
-Sentinel gives operations teams the governance capabilities they need to ensure that all infrastructure provisioned with Terraform Enterprise complies with their organization's provisioning rules. The files under this directory provide some sample Sentinel policies for several clouds including AWS, Microsoft Azure, Google Cloud Platform (GCP), and VMware. The external directory also includes an example of an external data source and a Sentinel policy which checks the result of that data source.
+Sentinel gives operations teams the governance capabilities they need to ensure that all infrastructure provisioned with Terraform Enterprise complies with their organization's provisioning rules. The files under this directory provide some sample Sentinel policies for several clouds including AWS, Microsoft Azure, Google Cloud Platform (GCP), and VMware.
 
 In addition, Sentinel [mock files](https://www.terraform.io/docs/enterprise/sentinel/mock.html) and [test files](https://docs.hashicorp.com/sentinel/commands/config#test-cases) have been provided under the test directory of each cloud so that the policies can be tested with the [Sentinel Simulator](https://docs.hashicorp.com/sentinel/commands). The mocks were generated from actual Terraform plans run against Terraform code that provisioned resources in these clouds. The mock-tfplan-pass.sentinel and mock-tfplan-fail.sentinel files were edited to respectively pass and fail the associated Sentinel policies. For policies that have multiple rules, there are more than one failing mock file with names that indicate which condition or conditions they fail.
 
@@ -10,6 +10,7 @@ To test the policies of any of the clouds, please do the following:
 1. Clone this repository to your local machine.
 1. Navigate to any of the cloud directories (aws, azure, gcp, or vmware).
 1. Run `sentinel test -verbose` to test all policies for that cloud.
+1. If you just want to test a single policy, run `sentinel test -verbose -run=<partial_policy_name>` where \<partial_policy_name\> is enough of the policy name to distinguish it from others in the same directory.
 
 Using the -verbose flag will show you the output that you would see if running the policies in TFE itself. You can drop it if you don't care about that output.
 

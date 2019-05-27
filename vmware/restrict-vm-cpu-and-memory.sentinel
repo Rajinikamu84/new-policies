@@ -1,62 +1,99 @@
-# imports
+##### restrict-vm-cpu-and-memory.sentinel #####
+# This policy uses the Sentinel tfplan import to require that
+# all VMware VMs obey CPU and memory limits
+
+##### Imports #####
+
 import "tfplan"
+import "strings"
+
+##### Functions #####
 
 # Find all resources of a specific type
 # from all modules using the tfplan import
 find_resources_from_plan = func(type) {
 
-  # Start with an empty list
-  resources = []
+  # Start with an empty map
+  resource_maps = {}
 
   # Iterate over all modules in the tfplan import
   for tfplan.module_paths as path {
+
     # Append all resources of the specified type
     # or the empty map, {}, if the module does not have any
-    append(resources, tfplan.module(path).resources[type] else {})
+    # to resource_maps, setting the key to the module path
+    resource_maps[path] = tfplan.module(path).resources[type] else {}
   }
 
-  return resources
+  # return resource_maps
+  return resource_maps
 }
 
-# Validate that all VMware VMs have at most 4 CPUs
-validate_cpu_and_memory_limits = func() {
+# Get the full address of a resource including modules, type, and name
+# in form module.<A>.module.<B>.<type>.<name>
+# module_path is like module paths returned by tfplan.module_paths
+get_address = func(module_path, type, name) {
+
+  # Handle root and non-root modules differently
+  if length(module_path) == 0 {
+    # root module
+    address = type + "." + name
+  } else {
+    # non-root module
+    address = "module." + strings.join(module_path, ".module.") + "." + type + "." + name
+  }
+
+  return address
+
+}
+
+# Validate that all VMware VMs have obey CPU and memory limits
+validate_cpu_and_memory_limits = func(cpu_limit, memory_limit) {
 
   # Initialize validated to true
   # This will be set to false if any instances violate rule
   validated = true
 
-  # Get all VMware VMs
-  all_resources = find_resources_from_plan("vsphere_virtual_machine")
+  # Set resource_type
+  resource_type = "vsphere_virtual_machine"
+
+  # Get all resources of specified type
+  resource_maps = find_resources_from_plan(resource_type)
 
   # Loop through the module-level resource maps
-  for all_resources as resource_map {
+  for resource_maps as module_path, resource_map {
     # Loop through the named resources
     for resource_map as name, instances {
       # Loop through resource instances
       for instances as index, r {
 
+        # Get addresses of the resource and the instance
+        resource_address = get_address(module_path, resource_type, name)
+        instance_address = resource_address + "[" + string(index) + "]"
+
         # Skip resources that are being destroyed
         # to avoid unnecessary policy violations
         if length(r.diff) == 0 {
-          print("Skipping resource", name + "-" + string(index), "that is being destroyed.")
+          print("Skipping resource", instance_address,
+            "that is being destroyed.")
           continue
         }
 
         # Validate that each instance has valid number of CPUs
         # If not, print violation message
-        if int(r.applied.num_cpus) > 4 {
-          print("virtual machine", name + "-" + string(index),
+        if int(r.applied.num_cpus) > cpu_limit {
+          print("virtual machine", instance_address,
             "has", r.applied.num_cpus, "CPUs,",
-            "which is greater than the limit", 4)
+            "which is greater than the limit", cpu_limit)
           validated = false
         }
 
         # Validate that each instance has valid amount of memory
         # If not, print violation message
-        if int(r.applied.memory) > 8192 {
-          print("virtual machine", name + "-" + string(index),
+        if int(r.applied.memory) > memory_limit {
+          print("virtual machine", instance_address,
             "has", r.applied.memory,
-            "MB of memory, which is greater than the limit", 8192)
+            "MB of memory, which is greater than the limit", memory_limit)
           validated = false
         }
 
@@ -68,8 +105,10 @@ validate_cpu_and_memory_limits = func() {
   return validated
 }
 
+##### Rules #####
+
 # Rule to restrict CPUs and memory
-cpu_and_memory_validated = validate_cpu_and_memory_limits()
+cpu_and_memory_validated = validate_cpu_and_memory_limits(4, 8192)
 limit_cpu_and_memory = rule {
   cpu_and_memory_validated
 }

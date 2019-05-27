@@ -1,12 +1,11 @@
-##### restrict-ingress-sg-rule-cidr-blocks.sentinel #####
-# This policy uses the Sentinel tfplan import to validate that
-# no security group rules have the CIDR "0.0.0.0/0"
+##### restrict-ec2-instance-type.sentinel #####
+# This policy uses the Sentinel tfplan import to require that
+# all EC2 instances have instance types from an allowed list
 
 ##### Imports #####
 
 import "tfplan"
 import "strings"
-import "types"
 
 ##### Functions #####
 
@@ -48,16 +47,16 @@ get_address = func(module_path, type, name) {
 
 }
 
-# Validate that all AWS ingress security group rules
-# do not have cidr_block 0.0.0.0/0
-validate_sgr_cidr_blocks = func() {
+# Validate that all EC2 instances have instance_type
+# in allowed_types list
+validate_instance_types = func(allowed_types) {
 
   # Initialize validated to true
-  # This will be set to false if any SG rules violate rule
+  # This will be set to false if any instances violate rule
   validated = true
 
   # Set resource_type
-  resource_type = "aws_security_group_rule"
+  resource_type = "aws_launch_configuration"
 
   # Get all resources of specified type
   resource_maps = find_resources_from_plan(resource_type)
@@ -76,24 +75,19 @@ validate_sgr_cidr_blocks = func() {
         # Skip resources that are being destroyed
         # to avoid unnecessary policy violations
         if length(r.diff) == 0 {
-          print("Skipping security group rule", instance_address,
+          print("Skipping launch configuration", instance_address,
             "that is being destroyed.")
           continue
         }
 
-        # Validate that each SG rule does not have disallowed value
-        # If it does, print violation message
-        # Since cidr_blocks is optional and could be computed,
-        # We check that it is present and really a list
-        # before checking whether it contains "0.0.0.0/0"
-        if r.applied.type is "ingress" and
-           length(r.applied.cidr_blocks) else 0 > 0 and
-           types.type_of(r.applied.cidr_blocks) is "list" and
-           r.applied.cidr_blocks contains "0.0.0.0/0" {
-             print("Ingress security group rule",
-               instance_address,
-               "contains disallowed cidr_block 0.0.0.0/0" )
-             validated = false
+        # Validate that each launch configuration
+        # has allowed instance type
+        # If not, print violation message
+        if r.applied.instance_type not in allowed_types {
+          print("launch configuration", instance_address,
+            "has instance type", r.applied.instance_type,
+            "that is not in the list", allowed_types)
+          validated = false
         }
 
       } // end resource instances
@@ -104,15 +98,24 @@ validate_sgr_cidr_blocks = func() {
   return validated
 }
 
+##### Lists #####
+
+# Allowed EC2 Instance Types
+# We don't include t2.micro to illustrate overriding failed policy
+allowed_types = [
+  "t2.small",
+  "t2.medium",
+  "t2.large",
+]
+
 ##### Rules #####
 
-# Rule to restrict ingress security group rules
-sgrs_validated = validate_sgr_cidr_blocks()
-restrict_ingress_sgrs = rule {
-  sgrs_validated is true
+# Rule to restrict launch configuration and EC2 instance types
+instance_type_allowed = rule {
+  validate_instance_types(allowed_types)
 }
 
 # Main rule that requires other rules to be true
 main = rule {
-  restrict_ingress_sgrs
+  instance_type_allowed
 }

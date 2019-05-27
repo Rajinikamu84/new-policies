@@ -299,7 +299,7 @@ _modules = {
 							"tags": {
 								"environment": "staging",
 							},
-							"vm_size": "Standard_DS1_v2",
+							"vm_size": "Standard_D1_v2",
 						},
 						"diff": {
 							"availability_set_id": {
@@ -474,7 +474,7 @@ _modules = {
 							},
 							"vm_size": {
 								"computed": false,
-								"new":      "Standard_DS1_v2",
+								"new":      "Standard_D1_v2",
 								"old":      "",
 							},
 						},
@@ -530,7 +530,7 @@ _modules = {
 							"tags": {
 								"environment": "staging",
 							},
-							"vm_size": "Standard_DS1_v2",
+							"vm_size": "Standard_D1_v2",
 						},
 						"diff": {
 							"availability_set_id": {
@@ -705,7 +705,7 @@ _modules = {
 							},
 							"vm_size": {
 								"computed": false,
-								"new":      "Standard_DS1_v2",
+								"new":      "Standard_D1_v2",
 								"old":      "",
 							},
 						},

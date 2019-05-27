@@ -1,53 +1,82 @@
-# imports
+##### restrict-ec2-instance-type.sentinel #####
+# This policy uses the Sentinel tfplan import to require that
+# all EC2 instances have instance types from an allowed list
+
+##### Imports #####
+
 import "tfplan"
+import "strings"
+
+##### Functions #####
 
 # Find all resources of a specific type
 # from all modules using the tfplan import
 find_resources_from_plan = func(type) {
 
-  # Start with an empty list
-  resources = []
+  # Start with an empty map
+  resource_maps = {}
 
   # Iterate over all modules in the tfplan import
   for tfplan.module_paths as path {
+
     # Append all resources of the specified type
     # or the empty map, {}, if the module does not have any
-    append(resources, tfplan.module(path).resources[type] else {})
+    # to resource_maps, setting the key to the module path
+    resource_maps[path] = tfplan.module(path).resources[type] else {}
   }
 
-  return resources
+  # return resource_maps
+  return resource_maps
 }
 
-# Allowed EC2 Instance Types
-# We don't include t2.micro to illustrate overriding failed policy
-allowed_types = [
-  "t2.small",
-  "t2.medium",
-  "t2.large",
-]
+# Get the full address of a resource including modules, type, and name
+# in form module.<A>.module.<B>.<type>.<name>
+# module_path is like module paths returned by tfplan.module_paths
+get_address = func(module_path, type, name) {
+
+  # Handle root and non-root modules differently
+  if length(module_path) == 0 {
+    # root module
+    address = type + "." + name
+  } else {
+    # non-root module
+    address = "module." + strings.join(module_path, ".module.") + "." + type + "." + name
+  }
+
+  return address
+
+}
 
 # Validate that all EC2 instances have instance_type
 # in allowed_types list
-validate_instance_types = func() {
+validate_instance_types = func(allowed_types) {
 
   # Initialize validated to true
   # This will be set to false if any instances violate rule
   validated = true
 
-  # Get all AWS instances
-  resource_maps = find_resources_from_plan("aws_instance")
+  # Set resource_type
+  resource_type = "aws_instance"
+
+  # Get all resources of specified type
+  resource_maps = find_resources_from_plan(resource_type)
+
 
   # Loop through the module-level resource maps
-  for resource_maps as resource_map {
+  for resource_maps as module_path, resource_map {
     # Loop through the named resources
     for resource_map as name, instances {
       # Loop through resource instances
       for instances as index, r {
 
+        # Get addresses of the resource and the instance
+        resource_address = get_address(module_path, resource_type, name)
+        instance_address = resource_address + "[" + string(index) + "]"
+
         # Skip resources that are being destroyed
         # to avoid unnecessary policy violations
         if length(r.diff) == 0 {
-          print("Skipping EC2 instance", name + "-" + string(index),
+          print("Skipping EC2 instance", instance_address,
             "that is being destroyed.")
           continue
         }
@@ -55,7 +84,7 @@ validate_instance_types = func() {
         # Validate that each instance has allowed value
         # If not, print violation message
         if r.applied.instance_type not in allowed_types {
-          print("aws_instance", name + "-" + string(index),
+          print("aws_instance", instance_address,
             "has attribute", r.applied.instance_type,
             "that is not in the list", allowed_types)
           validated = false
@@ -69,9 +98,21 @@ validate_instance_types = func() {
   return validated
 }
 
+##### Lists #####
+
+# Allowed EC2 Instance Types
+# We don't include t2.micro to illustrate overriding failed policy
+allowed_types = [
+  "t2.small",
+  "t2.medium",
+  "t2.large",
+]
+
+##### Rules #####
+
 # Rule to restrict EC2 instance types
 instance_type_allowed = rule {
-  validate_instance_types()
+  validate_instance_types(allowed_types)
 }
 
 # Main rule that requires other rules to be true
