@@ -30,17 +30,17 @@ find_resources_from_plan = func(type) {
 }
 
 # Get the full address of a resource including modules, type, and name
-# in form module.<A>.module.<B>.<type>.<name>
+# in form module.<A>.module.<B>.<type>.<name>[<index>]
 # module_path is like module paths returned by tfplan.module_paths
-get_address = func(module_path, type, name) {
+get_address = func(module_path, type, name, index) {
 
   # Handle root and non-root modules differently
   if length(module_path) == 0 {
     # root module
-    address = type + "." + name
+    address = type + "." + name + "[" + string(index) + "]"
   } else {
     # non-root module
-    address = "module." + strings.join(module_path, ".module.") + "." + type + "." + name
+    address = "module." + strings.join(module_path, ".module.") + "." + type + "." + name + "[" + string(index) + "]"
   }
 
   return address
@@ -69,13 +69,12 @@ validate_instance_types = func(allowed_types) {
       for instances as index, r {
 
         # Get addresses of the resource and the instance
-        resource_address = get_address(module_path, resource_type, name)
-        instance_address = resource_address + "[" + string(index) + "]"
+        address = get_address(module_path, resource_type, name, index)
 
         # Skip resources that are being destroyed
         # to avoid unnecessary policy violations
         if length(r.diff) == 0 {
-          print("Skipping launch configuration", instance_address,
+          print("Skipping resource", address,
             "that is being destroyed.")
           continue
         }
@@ -84,7 +83,7 @@ validate_instance_types = func(allowed_types) {
         # has allowed instance type
         # If not, print violation message
         if r.applied.instance_type not in allowed_types {
-          print("launch configuration", instance_address,
+          print("launch configuration", address,
             "has instance type", r.applied.instance_type,
             "that is not in the list", allowed_types)
           validated = false

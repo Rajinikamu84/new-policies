@@ -30,17 +30,17 @@ find_resources_from_plan = func(type) {
 }
 
 # Get the full address of a resource including modules, type, and name
-# in form module.<A>.module.<B>.<type>.<name>
+# in form module.<A>.module.<B>.<type>.<name>[<index>]
 # module_path is like module paths returned by tfplan.module_paths
-get_address = func(module_path, type, name) {
+get_address = func(module_path, type, name, index) {
 
   # Handle root and non-root modules differently
   if length(module_path) == 0 {
     # root module
-    address = type + "." + name
+    address = type + "." + name + "[" + string(index) + "]"
   } else {
     # non-root module
-    address = "module." + strings.join(module_path, ".module.") + "." + type + "." + name
+    address = "module." + strings.join(module_path, ".module.") + "." + type + "." + name + "[" + string(index) + "]"
   }
 
   return address
@@ -68,13 +68,12 @@ validate_cpu_and_memory_limits = func(cpu_limit, memory_limit) {
       for instances as index, r {
 
         # Get addresses of the resource and the instance
-        resource_address = get_address(module_path, resource_type, name)
-        instance_address = resource_address + "[" + string(index) + "]"
+        address = get_address(module_path, resource_type, name, index)
 
         # Skip resources that are being destroyed
         # to avoid unnecessary policy violations
         if length(r.diff) == 0 {
-          print("Skipping resource", instance_address,
+          print("Skipping resource", address,
             "that is being destroyed.")
           continue
         }
@@ -82,7 +81,7 @@ validate_cpu_and_memory_limits = func(cpu_limit, memory_limit) {
         # Validate that each instance has valid number of CPUs
         # If not, print violation message
         if int(r.applied.num_cpus) > cpu_limit {
-          print("virtual machine", instance_address,
+          print("Virtual machine", address,
             "has", r.applied.num_cpus, "CPUs,",
             "which is greater than the limit", cpu_limit)
           validated = false
@@ -91,7 +90,7 @@ validate_cpu_and_memory_limits = func(cpu_limit, memory_limit) {
         # Validate that each instance has valid amount of memory
         # If not, print violation message
         if int(r.applied.memory) > memory_limit {
-          print("virtual machine", instance_address,
+          print("Virtual machine", address,
             "has", r.applied.memory,
             "MB of memory, which is greater than the limit", memory_limit)
           validated = false

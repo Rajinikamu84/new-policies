@@ -31,17 +31,17 @@ find_resources_from_plan = func(type) {
 }
 
 # Get the full address of a resource including modules, type, and name
-# in form module.<A>.module.<B>.<type>.<name>
+# in form module.<A>.module.<B>.<type>.<name>[<index>]
 # module_path is like module paths returned by tfplan.module_paths
-get_address = func(module_path, type, name) {
+get_address = func(module_path, type, name, index) {
 
   # Handle root and non-root modules differently
   if length(module_path) == 0 {
     # root module
-    address = type + "." + name
+    address = type + "." + name + "[" + string(index) + "]"
   } else {
     # non-root module
-    address = "module." + strings.join(module_path, ".module.") + "." + type + "." + name
+    address = "module." + strings.join(module_path, ".module.") + "." + type + "." + name + "[" + string(index) + "]"
   }
 
   return address
@@ -70,13 +70,12 @@ validate_sgr_cidr_blocks = func() {
       for instances as index, r {
 
         # Get addresses of the resource and the instance
-        resource_address = get_address(module_path, resource_type, name)
-        instance_address = resource_address + "[" + string(index) + "]"
+        address = get_address(module_path, resource_type, name, index)
 
         # Skip resources that are being destroyed
         # to avoid unnecessary policy violations
         if length(r.diff) == 0 {
-          print("Skipping security group rule", instance_address,
+          print("Skipping resource", address,
             "that is being destroyed.")
           continue
         }
@@ -90,8 +89,7 @@ validate_sgr_cidr_blocks = func() {
            length(r.applied.cidr_blocks) else 0 > 0 and
            types.type_of(r.applied.cidr_blocks) is "list" and
            r.applied.cidr_blocks contains "0.0.0.0/0" {
-             print("Ingress security group rule",
-               instance_address,
+             print("Ingress security group rule", address,
                "contains disallowed cidr_block 0.0.0.0/0" )
              validated = false
         }
