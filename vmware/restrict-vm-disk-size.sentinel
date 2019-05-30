@@ -78,8 +78,31 @@ validate_disk_size = func(disk_limit) {
           continue
         }
 
+        # Initialize disk_count
+        disk_count = -1
+
         # Get all disks for the VM
         for r.applied.disk as disk {
+
+          # Increment disc_count for use in computed test
+          disc_count += 1
+
+          # Determine if the attribute is computed
+          if r.diff["disk."+disk_count+".size"].computed is true {
+
+            # Print message indicating a computed value was found
+            print("resource", address, "has disk", disk.label,
+              "with attribute, disk.size, that is computed.")
+
+            # If you want computed values to cause the policy to fail,
+            # uncomment the next line.
+            #validated = false
+
+            # Skip to next instance since Sentinel cannot validate
+            # computed values.
+            continue
+          }
+
           # Validate that each disk has valid disk size
           # If not, print violation message
           if int(disk.size) > disk_limit {

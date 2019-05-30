@@ -80,10 +80,26 @@ validate_instance_types = func(allowed_types) {
           continue
         }
 
+        # Determine if the attribute is computed
+        if r.diff["instance_type"].computed is true {
+
+          # Print message indicating a computed value was found
+          print("resource", address,
+            "has attribute, instance_type, that is computed.")
+
+          # If you want computed values to cause the policy to fail,
+          # uncomment the next line.
+          #validated = false
+
+          # Skip to next instance since Sentinel cannot validate
+          # computed values.
+          continue
+        }
+
         # Validate that each instance has allowed value
         # If not, print violation message
         if r.applied.instance_type not in allowed_types {
-          print("EC2 instance", address, "has attribute",
+          print("An EC2 instance", address, "has attribute",
             r.applied.instance_type, "that is not in the list", allowed_types)
           validated = false
         }

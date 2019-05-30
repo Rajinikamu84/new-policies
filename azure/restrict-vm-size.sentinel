@@ -79,6 +79,22 @@ validate_vm_sizes = func(allowed_sizes) {
           continue
         }
 
+        # Determine if the attribute is computed
+        if r.diff["vm_size"].computed is true {
+
+          # Print message indicating a computed value was found
+          print("resource", address,
+            "has attribute, vm_size, that is computed.")
+
+          # If you want computed values to cause the policy to fail,
+          # uncomment the next line.
+          #validated = false
+
+          # Skip to next instance since Sentinel cannot validate
+          # computed values.
+          continue
+        }
+
         # Validate that each VM has allowed size
         # If not, print violation message
         if r.applied.vm_size not in allowed_sizes {

@@ -80,6 +80,22 @@ validate_sgr_cidr_blocks = func() {
           continue
         }
 
+        # Determine if the attribute is computed
+        if r.diff["type"].computed or r.diff["cidr_blocks"].computed is true {
+
+          # Print message indicating a computed value was found
+          print("resource", address, "has attributes, type and/or cidr_blocks",
+            "that are computed.")
+
+          # If you want computed values to cause the policy to fail,
+          # uncomment the next line.
+          #validated = false
+
+          # Skip to next instance since Sentinel cannot validate
+          # computed values.
+          continue
+        }
+
         # Validate that each SG rule does not have disallowed value
         # If it does, print violation message
         # Since cidr_blocks is optional and could be computed,

@@ -79,6 +79,22 @@ validate_instance_types = func(allowed_types) {
           continue
         }
 
+        # Determine if the attribute is computed
+        if r.diff["instance_type"].computed is true {
+
+          # Print message indicating a computed value was found
+          print("resource", address,
+            "has attribute, instance_type, that is computed.")
+
+          # If you want computed values to cause the policy to fail,
+          # uncomment the next line.
+          #validated = false
+
+          # Skip to next instance since Sentinel cannot validate
+          # computed values.
+          continue
+        }
+
         # Validate that each launch configuration
         # has allowed instance type
         # If not, print violation message

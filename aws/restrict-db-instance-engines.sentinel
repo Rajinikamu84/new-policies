@@ -79,6 +79,21 @@ validate_engines = func(allowed_engines) {
           continue
         }
 
+        # Determine if the attribute is computed
+        if r.diff["engine"].computed is true {
+
+          print("resource", address,
+            "has attribute, engine, that is computed.")
+
+          # If you want computed values to cause the policy to fail,
+          # uncomment the next line.
+          #validated = false
+
+          # Skip to next instance since Sentinel cannot validate
+          # computed values.
+          continue
+        }
+
         # Validate that each instance has allowed value
         # If not, print violation message
         if r.applied.engine not in allowed_engines {

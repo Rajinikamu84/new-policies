@@ -79,6 +79,22 @@ validate_machine_types = func(allowed_types) {
           continue
         }
 
+        # Determine if the attribute is computed
+        if r.diff["machine_type"].computed is true {
+
+          # Print message indicating a computed value was found
+          print("resource", address,
+            "has attribute, machine_type, that is computed.")
+
+          # If you want computed values to cause the policy to fail,
+          # uncomment the next line.
+          #validated = false
+
+          # Skip to next instance since Sentinel cannot validate
+          # computed values.
+          continue
+        }
+
         # Validate that each instance has allowed value
         # If not, print violation message
         if r.applied.machine_type not in allowed_types {
