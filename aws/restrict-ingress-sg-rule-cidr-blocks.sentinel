@@ -30,10 +30,10 @@ find_resources_from_plan = func(type) {
   return resource_maps
 }
 
-# Get the full address of a resource including modules, type, and name
-# in form module.<A>.module.<B>.<type>.<name>[<index>]
+# Get the full address of a resource instance including modules, type,
+# name, and index in form module.<A>.module.<B>.<type>.<name>[<index>]
 # module_path is like module paths returned by tfplan.module_paths
-get_address = func(module_path, type, name, index) {
+get_instance_address = func(module_path, type, name, index) {
 
   # Handle root and non-root modules differently
   if length(module_path) == 0 {
@@ -70,7 +70,7 @@ validate_sgr_cidr_blocks = func() {
       for instances as index, r {
 
         # Get addresses of the resource and the instance
-        address = get_address(module_path, resource_type, name, index)
+        address = get_instance_address(module_path, resource_type, name, index)
 
         # Skip resources that are being destroyed
         # to avoid unnecessary policy violations
