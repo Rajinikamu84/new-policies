@@ -80,29 +80,25 @@ validate_machine_types = func(allowed_types) {
         }
 
         # Determine if the attribute is computed
-        if r.diff["machine_type"].computed is true {
+        if r.diff["machine_type"].computed else false is true {
 
           # Print message indicating a computed value was found
-          print("resource", address,
+          print("GCP compute instance", address,
             "has attribute, machine_type, that is computed.")
 
           # If you want computed values to cause the policy to fail,
           # uncomment the next line.
           #validated = false
-
-          # Skip to next instance since Sentinel cannot validate
-          # computed values.
-          continue
-        }
-
-        # Validate that each instance has allowed value
-        # If not, print violation message
-        if r.applied.machine_type not in allowed_types {
-          print("GCP compute instance", address,
-            "has attribute", r.applied.machine_type,
-            "that is not in the list", allowed_types)
-          validated = false
-        }
+        } else {
+          # Validate that each instance has allowed value
+          # If not, print violation message
+          if r.applied.machine_type not in allowed_types {
+            print("GCP compute instance", address,
+              "has attribute", r.applied.machine_type,
+              "that is not in the allowed list:", allowed_types)
+            validated = false
+          }
+        } // end computed check
 
       } // end resource instances
     } // end named resources
@@ -123,12 +119,10 @@ allowed_machine_types = [
 
 ##### Rules #####
 
-# Rule to restrict GCP compute machine types
-machine_type_allowed = rule {
-  validate_machine_types(allowed_machine_types)
-}
+# Call the validation function and assign results
+machine_type_allowed = validate_machine_types(allowed_machine_types)
 
-# Main rule that requires other rules to be true
+# Main rule
 main = rule {
-  machine_type_allowed
+  machine_type_allowed is true
 }

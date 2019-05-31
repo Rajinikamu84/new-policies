@@ -80,36 +80,32 @@ validate_instance_types = func(allowed_types) {
         }
 
         # Determine if the attribute is computed
-        if r.diff["instance_type"].computed is true {
+        if r.diff["instance_type"].computed else false is true {
 
           # Print message indicating a computed value was found
-          print("resource", address,
+          print("Launch configuration", address,
             "has attribute, instance_type, that is computed.")
 
           # If you want computed values to cause the policy to fail,
           # uncomment the next line.
           #validated = false
-
-          # Skip to next instance since Sentinel cannot validate
-          # computed values.
-          continue
-        }
-
-        # Validate that each launch configuration
-        # has allowed instance type
-        # If not, print violation message
-        if r.applied.instance_type not in allowed_types {
-          print("launch configuration", address,
-            "has instance type", r.applied.instance_type,
-            "that is not in the list", allowed_types)
-          validated = false
-        }
+        } else {
+          # Validate that each launch configuration
+          # has allowed instance type
+          # If not, print violation message
+          if r.applied.instance_type not in allowed_types {
+            print("Launch configuration", address,
+              "has instance type", r.applied.instance_type,
+              "that is not in the allowed list:", allowed_types)
+            validated = false
+          }
+        } // end computed check
 
       } // end resource instances
     } // end named resources
   } // end resorce maps
 
-  # Return validated which will be false if there were any violators
+  # Return validated which will be false if there were any violations
   return validated
 }
 
@@ -125,12 +121,10 @@ allowed_types = [
 
 ##### Rules #####
 
-# Rule to restrict launch configuration and EC2 instance types
-instance_type_allowed = rule {
-  validate_instance_types(allowed_types)
-}
+# Call the validation function and assign results
+instance_type_allowed = validate_instance_types(allowed_types)
 
-# Main rule that requires other rules to be true
+# Main rule
 main = rule {
-  instance_type_allowed
+  instance_type_allowed is true
 }

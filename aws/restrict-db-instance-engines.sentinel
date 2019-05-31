@@ -80,7 +80,7 @@ validate_engines = func(allowed_engines) {
         }
 
         # Determine if the attribute is computed
-        if r.diff["engine"].computed is true {
+        if r.diff["engine"].computed else false is true {
 
           print("resource", address,
             "has attribute, engine, that is computed.")
@@ -88,26 +88,22 @@ validate_engines = func(allowed_engines) {
           # If you want computed values to cause the policy to fail,
           # uncomment the next line.
           #validated = false
-
-          # Skip to next instance since Sentinel cannot validate
-          # computed values.
-          continue
-        }
-
-        # Validate that each instance has allowed value
-        # If not, print violation message
-        if r.applied.engine not in allowed_engines {
-          print("RDS DB instance", address,
-            "has engine", r.applied.engine,
-            "that is not in the allowed list:", allowed_engines)
-          validated = false
-        }
+        } else {
+          # Validate that each instance has allowed value
+          # If not, print violation message
+          if r.applied.engine not in allowed_engines {
+            print("RDS DB instance", address,
+              "has engine", r.applied.engine,
+              "that is not in the allowed list:", allowed_engines)
+            validated = false
+          }
+        } // end computed check
 
       } // end resource instances
     } // end named resources
   } // end resorce maps
 
-  # Return validated which will be false if there were any violators
+  # Return validated which will be false if there were any violations
   return validated
 }
 
@@ -122,12 +118,10 @@ allowed_engines = [
 
 ##### Rules #####
 
-# Rule to restrict RDS DB engines
-engine_allowed = rule {
-  validate_engines(allowed_engines)
-}
+# Call the validation function and assign results
+engine_allowed = validate_engines(allowed_engines)
 
-# Main rule that requires other rules to be true
+# Main rule
 main = rule {
-  engine_allowed
+  engine_allowed is true
 }

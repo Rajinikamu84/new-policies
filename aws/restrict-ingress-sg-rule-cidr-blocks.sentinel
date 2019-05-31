@@ -81,52 +81,46 @@ validate_sgr_cidr_blocks = func() {
         }
 
         # Determine if the attribute is computed
-        if r.diff["type"].computed or r.diff["cidr_blocks"].computed is true {
+        if r.diff["type"].computed else false or
+          r.diff["cidr_blocks.#"].computed else false is true {
 
           # Print message indicating a computed value was found
-          print("resource", address, "has attributes, type and/or cidr_blocks",
-            "that are computed.")
+          print("Security group rule", address,
+            "has attributes, type and/or cidr_blocks that are computed.")
 
           # If you want computed values to cause the policy to fail,
           # uncomment the next line.
           #validated = false
-
-          # Skip to next instance since Sentinel cannot validate
-          # computed values.
-          continue
-        }
-
-        # Validate that each SG rule does not have disallowed value
-        # If it does, print violation message
-        # Since cidr_blocks is optional and could be computed,
-        # We check that it is present and really a list
-        # before checking whether it contains "0.0.0.0/0"
-        if r.applied.type is "ingress" and
-           length(r.applied.cidr_blocks) else 0 > 0 and
-           types.type_of(r.applied.cidr_blocks) is "list" and
-           r.applied.cidr_blocks contains "0.0.0.0/0" {
-             print("Ingress security group rule", address,
-               "contains disallowed cidr_block 0.0.0.0/0" )
-             validated = false
-        }
+        } else {
+          # Validate that each SG rule does not have disallowed value
+          # If it does, print violation message
+          # Since cidr_blocks is optional and could be computed,
+          # We check that it is present and really a list
+          # before checking whether it contains "0.0.0.0/0"
+          if r.applied.type is "ingress" and
+             length(r.applied.cidr_blocks) else 0 > 0 and
+             types.type_of(r.applied.cidr_blocks) is "list" and
+             r.applied.cidr_blocks contains "0.0.0.0/0" {
+               print("Security group rule", address, "of type ingress",
+                 "contains disallowed cidr_block 0.0.0.0/0" )
+               validated = false
+          }
+        } // end computed check      
 
       } // end resource instances
     } // end named resources
   } // end resorce maps
 
-  # Return validated which will be false if there were any violators
+  # Return validated which will be false if there were any violations
   return validated
 }
 
 ##### Rules #####
 
-# Rule to restrict ingress security group rules
+# Call the validation function and assign results
 sgrs_validated = validate_sgr_cidr_blocks()
-restrict_ingress_sgrs = rule {
-  sgrs_validated is true
-}
 
-# Main rule that requires other rules to be true
+# Main rule
 main = rule {
-  restrict_ingress_sgrs
+  sgrs_validated is true
 }

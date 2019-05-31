@@ -80,28 +80,24 @@ validate_vm_sizes = func(allowed_sizes) {
         }
 
         # Determine if the attribute is computed
-        if r.diff["vm_size"].computed is true {
+        if r.diff["vm_size"].computed else false is true {
 
           # Print message indicating a computed value was found
-          print("resource", address,
+          print("Azure VM", address,
             "has attribute, vm_size, that is computed.")
 
           # If you want computed values to cause the policy to fail,
           # uncomment the next line.
           #validated = false
-
-          # Skip to next instance since Sentinel cannot validate
-          # computed values.
-          continue
-        }
-
-        # Validate that each VM has allowed size
-        # If not, print violation message
-        if r.applied.vm_size not in allowed_sizes {
-          print("Azure VM", address, "has attribute", r.applied.vm_size,
-            "that is not in the list", allowed_sizes)
-          validated = false
-        }
+        } else {
+          # Validate that each VM has allowed size
+          # If not, print violation message
+          if r.applied.vm_size not in allowed_sizes {
+            print("Azure VM", address, "has attribute", r.applied.vm_size,
+              "that is not in the allowed list:", allowed_sizes)
+            validated = false
+          }
+        } // end computed check
 
       } // end resource instances
     } // end named resources
@@ -123,12 +119,10 @@ allowed_vm_sizes = [
 
 ##### Rules #####
 
-# Rule to restrict Azure VM sizes
-vm_size_allowed = rule {
-  validate_vm_sizes(allowed_vm_sizes)
-}
+# Call the validation function and assign results
+vm_size_allowed = validate_vm_sizes(allowed_vm_sizes)
 
-# Main rule that requires other rules to be true
+# Main rule
 main = rule {
-  vm_size_allowed
+  vm_size_allowed is true
 }

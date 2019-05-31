@@ -84,33 +84,29 @@ validate_disk_size = func(disk_limit) {
         # Get all disks for the VM
         for r.applied.disk as disk {
 
-          # Increment disc_count for use in computed test
-          disc_count += 1
+          # Increment disk_count for use in computed test
+          disk_count += 1
 
           # Determine if the attribute is computed
-          if r.diff["disk."+disk_count+".size"].computed is true {
+          if r.diff["disk." + string(disk_count) + ".size"].computed else false is true {
 
             # Print message indicating a computed value was found
-            print("resource", address, "has disk", disk.label,
+            print("Virtual machine", address, "has disk", disk.label,
               "with attribute, disk.size, that is computed.")
 
             # If you want computed values to cause the policy to fail,
             # uncomment the next line.
             #validated = false
-
-            # Skip to next instance since Sentinel cannot validate
-            # computed values.
-            continue
-          }
-
-          # Validate that each disk has valid disk size
-          # If not, print violation message
-          if int(disk.size) > disk_limit {
-            print("Virtual machine", address,
-            "has disk", disk.label, "with size",
-            disk.size, "that is greater than the limit", disk_limit)
-            validated = false
-          }
+          } else {
+            # Validate that each disk has valid disk size
+            # If not, print violation message
+            if int(disk.size) > disk_limit {
+              print("Virtual machine", address,
+              "has disk", disk.label, "with size",
+              disk.size, "that is greater than the limit", disk_limit)
+              validated = false
+            }
+          } // end computed check
 
         } // end disks
       } // end resource instances
@@ -123,13 +119,10 @@ validate_disk_size = func(disk_limit) {
 
 ##### Rules #####
 
-# Rule to restrict disk size
+# Call the validation function and assign results
 vm_disks_validated = validate_disk_size(100)
-limit_vm_disk_size = rule {
-  vm_disks_validated
-}
 
-# Main rule that requires other rules to be true
+# Main rule
 main = rule {
-  limit_vm_disk_size
+  vm_disks_validated is true
 }

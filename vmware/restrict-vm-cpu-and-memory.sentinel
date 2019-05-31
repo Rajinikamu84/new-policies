@@ -79,7 +79,7 @@ validate_cpu_and_memory_limits = func(cpu_limit, memory_limit) {
         }
 
         # Determine if the attribute is computed
-        if r.diff["num_cpus"].computed is true {
+        if r.diff["num_cpus"].computed else false is true {
 
           # Print message indicating a computed value was found
           print("resource", address,
@@ -88,23 +88,19 @@ validate_cpu_and_memory_limits = func(cpu_limit, memory_limit) {
           # If you want computed values to cause the policy to fail,
           # uncomment the next line.
           #validated = false
-
-          # Skip to next instance since Sentinel cannot validate
-          # computed values.
-          continue
-        }
-
-        # Validate that each instance has valid number of CPUs
-        # If not, print violation message
-        if int(r.applied.num_cpus) > cpu_limit {
-          print("Virtual machine", address,
-            "has", r.applied.num_cpus, "CPUs,",
-            "which is greater than the limit", cpu_limit)
-          validated = false
-        }
+        } else {
+          # Validate that each instance has valid number of CPUs
+          # If not, print violation message
+          if int(r.applied.num_cpus) > cpu_limit {
+            print("Virtual machine", address,
+              "has", r.applied.num_cpus, "CPUs,",
+              "which is greater than the limit", cpu_limit)
+            validated = false
+          }
+        } // end cpus computed check
 
         # Determine if the attribute is computed
-        if r.diff["memory"].computed is true {
+        if r.diff["memory"].computed else false is true {
 
           # Print message indicating a computed value was found
           print("resource", address,
@@ -113,20 +109,16 @@ validate_cpu_and_memory_limits = func(cpu_limit, memory_limit) {
           # If you want computed values to cause the policy to fail,
           # uncomment the next line.
           #validated = false
-
-          # Skip to next instance since Sentinel cannot validate
-          # computed values.
-          continue
-        }
-
-        # Validate that each instance has valid amount of memory
-        # If not, print violation message
-        if int(r.applied.memory) > memory_limit {
-          print("Virtual machine", address,
-            "has", r.applied.memory,
-            "MB of memory, which is greater than the limit", memory_limit)
-          validated = false
-        }
+        } else {
+          # Validate that each instance has valid amount of memory
+          # If not, print violation message
+          if int(r.applied.memory) > memory_limit {
+            print("Virtual machine", address,
+              "has", r.applied.memory,
+              "MB of memory, which is greater than the limit", memory_limit)
+            validated = false
+          }
+        } // end memory computed check
 
       } // end resource instances
     } // end named resources
@@ -138,13 +130,10 @@ validate_cpu_and_memory_limits = func(cpu_limit, memory_limit) {
 
 ##### Rules #####
 
-# Rule to restrict CPUs and memory
+# Call the validation function and assign results
 cpu_and_memory_validated = validate_cpu_and_memory_limits(4, 8192)
-limit_cpu_and_memory = rule {
-  cpu_and_memory_validated
-}
 
-# Main rule that requires other rules to be true
+# Main rule
 main = rule {
-  limit_cpu_and_memory
+  cpu_and_memory_validated is true
 }

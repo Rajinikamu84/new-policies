@@ -80,53 +80,45 @@ validate_private_acl_and_kms_encryption = func() {
         }
 
         # Determine if the attribute is computed
-        if r.diff["acl"].computed is true {
+        if r.diff["acl"].computed else false is true {
 
-          print("resource", address, "has attribute, acl, that is computed.")
+          print("S3 bucket", address, "has attribute, acl, that is computed.")
 
           # If you want computed values to cause the policy to fail,
           # uncomment the next line.
           #validated = false
-
-          # Skip to next instance since Sentinel cannot validate
-          # computed values.
-          continue
-        }
-
-        # Check whether ACL is private
-        if r.applied.acl is not "private" {
-          print("S3 bucket", address, "has ACL", r.applied.acl,
-            "that is not private.")
-          private = false
-        }
+        } else {
+          # Check whether ACL is private
+          if r.applied.acl is not "private" {
+            print("S3 bucket", address, "has ACL", r.applied.acl,
+              "that is not private.")
+            private = false
+          }
+        } // end acl computed check
 
         # Determine if the attribute is computed.
-        if r.diff["server_side_encryption_configuration.0.rule.0.apply_server_side_encryption_by_default.0.sse_algorithm"].computed is true {
+        if r.diff["server_side_encryption_configuration.0.rule.0.apply_server_side_encryption_by_default.0.sse_algorithm"].computed else false is true {
 
-          print("resource", address, "has attribute, server_side_encryption_configuration.0.rule.0.apply_server_side_encryption_by_default.0.sse_algorithm, that is computed.")
+          print("S3 bucket", address, "has attribute, server_side_encryption_configuration.0.rule.0.apply_server_side_encryption_by_default.0.sse_algorithm, that is computed.")
 
           # If you want computed values to cause the policy to fail,
           # uncomment the next line.
           #validated = false
-
-          # Skip to next instance since Sentinel cannot validate
-          # computed values.
-          continue
-        }
-
-        # Check whether server-side encryption enabled
-        # by default with KMS encryption
-        if length(r.applied.server_side_encryption_configuration) else 0 == 0 or r.applied.server_side_encryption_configuration[0].rule[0].apply_server_side_encryption_by_default[0].sse_algorithm is not "aws:kms" {
-          print("S3 bucket", address,
-          "is not encrypted by default with a KMS key.")
-          encrypted_by_kms = false
-        }
+        } else {
+          # Check whether server-side encryption enabled
+          # by default with KMS encryption
+          if length(r.applied.server_side_encryption_configuration) else 0 == 0 or r.applied.server_side_encryption_configuration[0].rule[0].apply_server_side_encryption_by_default[0].sse_algorithm is not "aws:kms" {
+            print("S3 bucket", address,
+            "is not encrypted by default with a KMS key.")
+            encrypted_by_kms = false
+          }
+        } // end encryption computed check
 
       } // end resource instances
     } // end named resources
   } // end resorce maps
 
-  # Return booleans
+  # Return booleans which will be false if there were any violations
   return [private, encrypted_by_kms]
 }
 
@@ -137,17 +129,7 @@ validations = validate_private_acl_and_kms_encryption()
 private = validations[0]
 encrypted_by_kms = validations[1]
 
-# Rule to require all buckets have ACL private
-require_private_acl = rule {
-  private is true
-}
-
-# Rule to require server-side encryption by a KMS key
-require_kms_encryption = rule {
-  encrypted_by_kms is true
-}
-
-# Main rule that requires other rules to be true
+# Main rule
 main = rule {
-  require_private_acl and require_kms_encryption
+  private and encrypted_by_kms is true
 }
