@@ -86,7 +86,7 @@ validate_private_acl_and_kms_encryption = func() {
 
           # If you want computed values to cause the policy to fail,
           # uncomment the next line.
-          #validated = false
+          #private = false
         } else {
           # Check whether ACL is private
           if r.applied.acl is not "private" {
@@ -103,7 +103,7 @@ validate_private_acl_and_kms_encryption = func() {
 
           # If you want computed values to cause the policy to fail,
           # uncomment the next line.
-          #validated = false
+          #encrypted_by_kms = false
         } else {
           # Check whether server-side encryption enabled
           # by default with KMS encryption
