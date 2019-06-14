@@ -13,38 +13,33 @@ import "strings"
 # from all modules using the tfplan import
 find_resources_from_plan = func(type) {
 
-  # Start with an empty map
   resource_maps = {}
 
   # Iterate over all modules in the tfplan import
   for tfplan.module_paths as path {
 
+    # Compute joined_path from the module path
+    if length(path) == 0 {
+      joined_path = ""
+    } else {
+      joined_path = "module." + strings.join(path, ".module.") + "."
+    }
+
     # Append all resources of the specified type to resource_maps
-    # setting the key to the module path. Set the empty map, {}, If the
+    # setting the key to joined_path. Append the empty map, {}, if the
     # module does not have any resources of the specified type.
-    resource_maps[path] = tfplan.module(path).resources[type] else {}
+    resource_maps[joined_path] = tfplan.module(path).resources[type] else {}
   }
 
-  # return resource_maps
   return resource_maps
 }
 
 # Get the full address of a resource instance including modules, type,
 # name, and index in form module.<A>.module.<B>.<type>.<name>[<index>]
 # module_path is like module paths returned by tfplan.module_paths
-get_instance_address = func(module_path, type, name, index) {
-
-  # Handle root and non-root modules differently
-  if length(module_path) == 0 {
-    # root module
-    address = type + "." + name + "[" + string(index) + "]"
-  } else {
-    # non-root module
-    address = "module." + strings.join(module_path, ".module.") + "." + type + "." + name + "[" + string(index) + "]"
-  }
-
+get_instance_address = func(joined_path, type, name, index) {
+  address = joined_path + type + "." + name + "[" + string(index) + "]"
   return address
-
 }
 
 # Validate that all GCP compute instances have machine_type
@@ -81,13 +76,10 @@ validate_machine_types = func(allowed_types) {
 
         # Determine if the attribute is computed
         if r.diff["machine_type"].computed else false is true {
-
           # Print message indicating a computed value was found
           print("GCP compute instance", address,
             "has attribute, machine_type, that is computed.")
-
-          # If you want computed values to cause the policy to fail,
-          # uncomment the next line.
+          # If you want computed values to cause the policy to fail, uncomment the next line.
           #validated = false
         } else {
           # Validate that each instance has allowed value
