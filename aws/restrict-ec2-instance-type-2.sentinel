@@ -63,8 +63,7 @@ validate_ec2_instance_types = func(allowed_types) {
     # Skip resources that are being destroyed
     # to avoid unnecessary policy violations
     if length(r.diff) == 0 {
-      print("Skipping resource", address,
-        "that is being destroyed.")
+      print("Skipping resource", address, "that is being destroyed.")
       continue
     }
 

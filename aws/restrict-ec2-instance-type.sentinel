@@ -70,23 +70,21 @@ validate_instance_types = func(allowed_types) {
         # Skip resources that are being destroyed
         # to avoid unnecessary policy violations
         if length(r.diff) == 0 {
-          print("Skipping resource", address,
-            "that is being destroyed.")
+          print("Skipping resource", address, "that is being destroyed.")
           continue
         }
 
         # Determine if the attribute is computed
         if r.diff["instance_type"].computed else false is true {
-          # Print message indicating a computed value was found
           print("EC2 instance", address,
             "has attribute, instance_type, that is computed.")
-          # If you want computed values to cause the policy to fail, uncomment the next line.
-          #validated = false
+          # If you want computed values to cause the policy to fail,
+          # uncomment the next line.
+          # validated = false
         } else {
           # Validate that each instance has allowed value
-          # If not, print violation message
           if r.applied.instance_type not in allowed_types {
-            print("EC2 instance", address, "has attribute",
+            print("EC2 instance", address, "has instance_type",
               r.applied.instance_type, "that is not in the allowed list:", allowed_types)
             validated = false
           }
