@@ -11,7 +11,7 @@ find_resources_from_plan = func(type) {
 				} else {
 					# non-root module
 					address = "module." + strings.join(path, ".module.") + "." +
-                    type + "." + name + "[" + string(index) + "]"
+                                                  type + "." + name + "[" + string(index) + "]"
 				}
 				# Append all resource instances to resources map,
 				# setting the key to the address
