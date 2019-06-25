@@ -69,8 +69,7 @@ validate_ec2_instance_types = func(allowed_types) {
       # Validate that each instance has allowed value
       if (r.applied.instance_type else "") not in allowed_types {
         print("EC2 instance", address, "has instance_type",
-              r.applied.instance_type, "that is not in the allowed list:",
-              allowed_types)
+              r.applied.instance_type, "that is not in the allowed list:", allowed_types)
         validated = false
       }
     }
