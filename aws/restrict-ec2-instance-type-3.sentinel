@@ -39,7 +39,8 @@ find_resources_from_plan = func(type) {
   return resources
 }
 
-# Validate that all EC2 instances have instance_type in allowed_types list
+# Validate that all EC2 instances have instance_type in
+# allowed_types list
 validate_ec2_instance_types = func(allowed_types) {
 
   validated = true
@@ -61,11 +62,15 @@ validate_ec2_instance_types = func(allowed_types) {
     if r.diff["instance_type"].computed else false is true {
       print("EC2 instance", address,
             "has attribute, instance_type, that is computed.")
+      # If you want computed values to cause the policy to fail,
+      # uncomment the next line.
+      # validated = false
     } else {
       # Validate that each instance has allowed value
       if (r.applied.instance_type else "") not in allowed_types {
         print("EC2 instance", address, "has instance_type",
-          r.applied.instance_type, "that is not in the allowed list:", allowed_types)
+              r.applied.instance_type, "that is not in the allowed list:",
+              allowed_types)
         validated = false
       }
     }
